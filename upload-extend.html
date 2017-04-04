@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>upload extend</title>
+		<link href="css/index.css" rel="stylesheet" />
+		<style>
+			.upload-extend-list .el-icon-circle-check {
+				display: none;
+			}
+			
+			.upload-extend-list .is-success .el-icon-circle-check {
+				display: block;
+			}
+			
+			.upload-extend-list .el-icon-close {
+				cursor: pointer;
+			}
+			
+			.upload-extend-list-el-progress {
+				position: relative;
+				left: 0;
+				top: 0;
+				padding-top: 5px;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="app">
+			
+			<!--
+				目的：el的上传功能满足不了系统需要
+				添加的功能：列表的信息更详细，并且还可以根据自己的需要修改；添加容量大小限制；
+					      	添加数量限制；修复文件上传之后消失的问题；文件格式限制，el的rar等格式限制，出现卡屏问题
+					      	文件上传错误定义：这个主要是未上传时出现的错误，比如文件的大小超出大小限制
+				添加的属性：count,size,upload-error
+				其他：其他属性跟el的upload是一样的，具体怎么用可以查看el的官网的API
+			-->
+			<upload-extend
+				ref="upload"
+				action="//jsonplaceholder.typicode.com/posts/"
+				:on-change="handleChange"
+				:before-upload="before"
+				accept="image,video,.txt"
+				:show-file-list="true"
+				:upload-error="error"
+				:size="200*1024"
+				:on-preview="preview"
+				:auto-upload="false"
+				:on-remove="remove"
+				:on-progress="progress"
+				:on-success="success"
+				:multiple="true"
+				:count="10"
+				:file-list="fileList3">
+				<el-button size="small" type="primary">点击上传</el-button>
+			  	<div slot="tip" class="el-upload__tip">只能上传jpg/png文件，且不超过200kb</div>
+			</upload-extend>
+			<br />
+			<el-button size="small" @click="submit" type="primary">点击上传到服务器</el-button>
+			
+			<el-dialog title="图片预览" v-model="visible">
+				<img :src="img.url" :alt="img.name" width="100%"  />
+			</el-dialog>
+		</div>
+		
+		<!--模板，可以写成字符串拼接，这样可以写入js文件，方便调用-->
+		<script type="text/template" id="upload-extend">
+			<div class="upload-extend">
+				<el-upload
+					ref="el-upload"
+					:action="action"
+					:headers="headers"
+					:multiple="multiple"
+					:data="data"
+					:with-credentials="withCredentials"
+					:show-file-list="false"
+					:type="type"
+					accept=""
+					:on-success="inneronSuccess"
+					:on-error="inneronError"
+					:on-progress="inneronProgress"
+					:list-type="listType"
+					:auto-upload="false"
+					:file-list="fileList">
+				  <slot></slot>
+				  <slot name="tip"></slot>
+				</el-upload>
+				<div class="upload-extend-list" v-if="showFileList">
+					<ul class="el-upload-list el-upload-list--text">
+						<li class="el-upload-list__item" :class="setClass(item)" v-for="(item,index) in items">
+							<a href="#" class="el-upload-list__item-name" @click.prevent="inneronPreview(item)">
+								<i class="el-icon-document"></i>
+								{{item.name}}
+    						</a>
+    						<label class="el-upload-list__item-status-label">
+    							<i class="el-icon-circle-check"></i>
+    							<i class="el-icon-close" v-show="item.status!='uploading'" @click.stop="inneronRemove(index)"></i>
+    						</label>
+    						<span class="upload-extend-list-description">
+    							<label>大小：{{item.size?(item.size/1024).toFixed(3):0}}k</label>
+    							<label>类型：{{item.raw?item.raw.type:""}}</label>
+    							<label>状态：{{item.status}}</label>
+    						</span>
+    						<div class="upload-extend-list-el-progress" v-show="item.percentage&&item.percentage!=0">
+    							<el-progress :percentage="item.percentage?item.percentage.toFixed(0):0"></el-progress>
+    						</div>
+    						
+						</li>
+					</ul>
+				</div>
+			</div>
+			
+		</script>
+		
+		<script type="text/javascript" src="js/vue.min.js" ></script>
+		<script type="text/javascript" src="js/element-ui.min.js" ></script>
+		<script>
+			
+new Vue({
+	el: "#app",
+	data: {
+		fileList3: [{
+			name: 'food.jpeg',
+			url: 'https://fuss10.elemecdn.com/3/63/4e7f3a15429bfda99bce42a18cdd1jpeg.jpeg?imageMogr2/thumbnail/360x360/format/webp/quality/100',
+			status: 'finished'
+		}, {
+			name: 'food2.jpeg',
+			url: 'https://fuss10.elemecdn.com/3/63/4e7f3a15429bfda99bce42a18cdd1jpeg.jpeg?imageMogr2/thumbnail/360x360/format/webp/quality/100',
+			status: 'finished'
+		}],
+		img:{},
+		visible:false
+	},
+	props: [],
+	methods: {
+		handleChange(file, fileList) {
+			console.log(arguments)
+			//this.fileList3 = fileList.slice(-3);
+		},
+		error: function(msg, file, typeError) {
+			console.log(msg);
+			console.log(file)
+		},
+		preview: function(file, fileList) {
+			if(file.raw&&file.raw.type.search(/^image\//i)>-1){
+				this.img=file;
+				this.visible=true;
+			}
+			else{
+				window.open(file.url,"","");
+			}
+		},
+		remove: function(file, fileList) {
+			console.log(fileList)
+		},
+		success: function(res,file,fileList) {
+
+		},
+		before: function(file) {
+			console.log(file)
+
+		},
+		submit: function() {
+			this.$refs["upload"].submit();
+		},
+		progress: function() {
+			console.log(arguments)
+		}
+	},
+	components: {
+		"upload-extend": {
+			template: "#upload-extend",
+			props: ["fileList", "onChange", "action", "headers", "multiple", "data", "name",
+				"withCredentials", "showFileList", "type", "accept", "onPreview", "onRemove", "onSuccess",
+				"onError", "onProgress", "onChange", "beforeUpload", "listType", "autoUpload", "fileList", "clearFiles",
+				"uploadError", "size", "count", "inputChange"
+			],
+			methods: {
+				inneronPreview: function(item) {
+					if(typeof this.onPreview == "function") {
+						this.onPreview.call(this.$parent, item, this.items);
+					}
+				},
+				inneronRemove: function(index) {
+					var datas = this.$refs["el-upload"].uploadFiles;
+					var data = datas.splice(index, 1);
+					this.items = [].concat(datas);
+
+					if(typeof this.onRemove == "function") {
+						this.onRemove.call(this.$parent, data, datas);
+					}
+				},
+				inneronSuccess: function() {
+					if(typeof this.onSuccess == "function") {
+						this.onSuccess.call(this.$parent, arguments[1], arguments[2]);
+					}
+					this.inneronChange.apply(this, arguments);
+				},
+				inneronError: function() {
+					if(typeof this.onError == "function") {
+						this.onError.apply(this.$parent, arguments);
+					}
+					this.inneronChange.apply(this, arguments[1], arguments[2]);
+				},
+				inneronProgress: function() {
+					if(typeof this.onProgress == "function") {
+						this.onProgress.apply(this.$parent, arguments);
+					}
+				},
+				inneronChange: function() {
+					if(typeof this.onChange == "function") {
+						this.onChange.apply(this.$parent, arguments);
+					}
+				},
+				innerBeforeUpload: function() {
+					if(typeof this.beforeUpload == "function") {
+						return this.beforeUpload.apply(this.$parent, arguments);
+					}
+					
+					return true;
+				},
+				submit: function() {
+					var data, datas = this.items;
+					var innerUpload = this.$refs["el-upload"].$refs['upload-inner'];
+
+					for(var i = 0, ii = datas.length; i < ii; i++) {
+						data = datas[i];
+						if(data.status == "ready" && this.innerBeforeUpload(data) !== false) {
+							innerUpload.upload(data.raw, data);
+						}
+					}
+				},
+				init: function() {
+					this.items = this.fileList;
+					var _this = this;
+					var upload = this.$refs["el-upload"];
+					upload.$watch("uploadFiles", function(val) {
+						var nameDatas = {},
+							fileType, fileTypeArray, len = _this.items.length,
+							data, datas = [],
+							flag = true,
+							reg, size;
+
+						if(val.length > 0 && val.length != len) {
+							_this.accept = _this.accept || ""
+							reg = new RegExp(_this.accept.split(",").join("|"));
+							fileTypeArray = _this.accept.match(/audio|video|image/ig);
+							fileType = fileTypeArray ? new RegExp(fileTypeArray.join("|"), "i") : "";
+							size = _this.size;
+							
+							//数量限制
+							if(_this.count && val.length > _this.count) {
+								flag = false;
+								data = upload["uploadFiles"].splice(len, val.length - len);
+								if(typeof _this.uploadError == "function") {
+									_this.uploadError.call(_this, "上传文件数量不能大于" + _this.count, data, 3);
+								}
+
+								return false;
+							}
+
+							for(var i = 0, ii = val.length; i < ii; i++) {
+								data = val[i];
+								if(i < len) {
+									nameDatas[data.name] = data.size;
+									continue;
+								}
+
+								//格式判断，第一项是大类判断
+								if(!((fileType && data.raw.type.search(fileType) > -1) ||
+										(_this.accept && data.name.search(reg) > -1))) {
+
+									flag = false;
+									upload["uploadFiles"].splice(i, ii - i);
+									if(typeof _this.uploadError == "function") {
+										_this.uploadError.call(_this, "不能上传该格式的文件", data, 1);
+									}
+
+									break;
+								}
+
+								//文件大小判断
+								if(size && (isNaN(size) || data.size > size)) {
+									flag = false;
+									upload["uploadFiles"].splice(i, ii - i);
+									if(typeof _this.uploadError == "function") {
+										_this.uploadError.call(_this, "文件的大小不能大于" + (size / 1024) + "k", data, 2);
+									}
+
+									break;
+								}
+								
+								//文件名限制可以除掉
+								if(nameDatas[data.name]) {
+									flag = false;
+									upload["uploadFiles"].splice(i, ii - i);
+									if(typeof _this.uploadError == "function") {
+										_this.uploadError.call(_this, "文件名称不能跟已有的文件名相同", data, 4);
+									}
+
+									break;
+								}
+							}
+
+							//文件上传
+							if(flag === true && _this.autoUpload == true) {
+								for(var k = len, kk = val.length; k < kk; k++) {
+									data = val[k];
+									if(_this.innerBeforeUpload(data) !== false) {
+										upload.$refs['upload-inner'].upload(data.raw, data);
+									}
+								}
+							}
+
+						}
+
+						_this.items = [].concat(val);
+
+					});
+				},
+				setClass: function(item) {
+					return "is-" + item.status;
+				}
+			},
+			data: function() {
+				return {
+					items: []
+				}
+			},
+			mounted: function() {
+				this.init();
+			}
+
+		}
+	}
+})
+		
+		</script>
+	</body>
+</html>
