@@ -201,7 +201,7 @@ new Vue({
 					if(typeof this.onError == "function") {
 						this.onError.apply(this.$parent, arguments);
 					}
-					this.inneronChange.apply(this, arguments[1], arguments[2]);
+					this.inneronChange.call(this, arguments[1], arguments[2]);
 				},
 				inneronProgress: function() {
 					if(typeof this.onProgress == "function") {
